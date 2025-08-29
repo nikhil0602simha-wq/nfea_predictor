@@ -1,47 +1,23 @@
 import streamlit as st
+import joblib
 import pandas as pd
-import pickle
 
-# -------------------------------
-# Load the trained model
-# -------------------------------
-with open("gradient_boosting_model.pkl", "rb") as file:
-    model = pickle.load(file)
+# Load trained model
+gbr = joblib.load("gradient_boosting_model.pkl")
 
-# Get the feature names used during training
-try:
-    model_features = model.feature_names_in_
-except AttributeError:
-    model_features = None
+# Get feature names exactly as model knows them
+features = gbr.feature_names_in_
 
-# -------------------------------
-# Streamlit App UI
-# -------------------------------
-st.set_page_config(page_title="NFEA Predictor", page_icon="🤖", layout="centered")
-st.title("📊 NFEA Prediction App")
-st.write("Enter the input values below to predict the target variable.")
+st.title("🔮 NFEA Predictor")
 
-# -------------------------------
-# Input Section
-# -------------------------------
-input_data = {}
-if model_features is not None:
-    st.subheader("Enter Values")
-    for feature in model_features:
-        input_data[feature] = st.number_input(f"**{feature}**", value=0.0)
-else:
-    st.error("Model feature names not found. Please ensure the model was trained with feature names.")
+# Input fields
+user_input = []
+for feature in features:
+    value = st.number_input(f"Enter value for {feature}", format="%.6f")
+    user_input.append(value)
 
-# Convert to DataFrame
-input_df = pd.DataFrame([input_data])
-
-# -------------------------------
-# Prediction Button
-# -------------------------------
+# Prediction button
 if st.button("Predict"):
-    try:
-        prediction = model.predict(input_df)
-        st.success(f"🎯 Predicted Value: **{prediction[0]:.2f}**")
-    except ValueError as e:
-        st.error(f"Prediction failed: {e}")
-        st.info("Make sure your inputs match the model's expected features.")
+    user_input_df = pd.DataFrame([user_input], columns=features)
+    prediction = gbr.predict(user_input_df)
+    st.success(f"Predicted NFEA: {prediction[0]:.2f}")
