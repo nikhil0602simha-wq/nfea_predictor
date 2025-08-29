@@ -1,36 +1,47 @@
 import streamlit as st
 import pandas as pd
-import joblib
+import pickle
 
+# -------------------------------
 # Load the trained model
-model = joblib.load("gradient_boosting_model.pkl")
+# -------------------------------
+with open("gradient_boosting_model.pkl", "rb") as file:
+    model = pickle.load(file)
 
+# Get the feature names used during training
+try:
+    model_features = model.feature_names_in_
+except AttributeError:
+    model_features = None
+
+# -------------------------------
 # Streamlit App UI
-st.set_page_config(page_title="NFEA Predictor", page_icon="📈", layout="centered")
+# -------------------------------
+st.set_page_config(page_title="NFEA Predictor", page_icon="🤖", layout="centered")
+st.title("📊 NFEA Prediction App")
+st.write("Enter the input values below to predict the target variable.")
 
-st.title("📌 NFEA Prediction App")
-st.write("Enter the input parameters below to predict the NFEA value:")
+# -------------------------------
+# Input Section
+# -------------------------------
+input_data = {}
+if model_features is not None:
+    st.subheader("Enter Values")
+    for feature in model_features:
+        input_data[feature] = st.number_input(f"**{feature}**", value=0.0)
+else:
+    st.error("Model feature names not found. Please ensure the model was trained with feature names.")
 
-# Input fields
-col1, col2 = st.columns(2)
+# Convert to DataFrame
+input_df = pd.DataFrame([input_data])
 
-with col1:
-    beta = st.number_input("β", value=0.4, format="%.3f")
-    gamma = st.number_input("γ", value=80.0, format="%.3f")
-    theta = st.number_input("θ (°)", value=45, step=1)
-
-with col2:
-    dc = st.number_input("dc (m)", value=0.2, format="%.3f")
-    t0 = st.number_input("t0 (m)", value=0.00125, format="%.5f")
-
-# Predict button
-if st.button("🔍 Predict NFEA"):
-    # Prepare input DataFrame
-    input_df = pd.DataFrame([[beta, gamma, theta, dc, t0]],
-                            columns=["β", "γ", "θ (°)", "dc​ (m)", "t0​ (m)"])
-    
-    # Make prediction
-    prediction = model.predict(input_df)
-    
-    # Display result
-    st.success(f"Predicted NFEA: {prediction[0]:.2f}")
+# -------------------------------
+# Prediction Button
+# -------------------------------
+if st.button("Predict"):
+    try:
+        prediction = model.predict(input_df)
+        st.success(f"🎯 Predicted Value: **{prediction[0]:.2f}**")
+    except ValueError as e:
+        st.error(f"Prediction failed: {e}")
+        st.info("Make sure your inputs match the model's expected features.")
